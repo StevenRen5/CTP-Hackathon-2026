@@ -13,6 +13,7 @@ const DATASET_LABEL = {
   rodent: 'Rodent',
 }
 
+// hard coded sample data to be returned to the frontend after reading visible text on apartment page
 const SAMPLE_REPORT = {
   address: '123 Sample Avenue, Brooklyn, NY 11215',
   bbl: '3012347501',
