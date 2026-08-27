@@ -41,12 +41,12 @@ def health():
 
 
 @app.post("/extract")
-def extract(body: PageIn):
+async def extract(body: PageIn):
     """Raw listing page text + URL -> clean structured address."""
     if not body.page_text.strip() and not body.page_url.strip():
         raise HTTPException(status_code=400, detail="page_text and page_url are both empty")
     try:
-        return extract_address(body.page_text, body.page_url)
+        return await extract_address(body.page_text, body.page_url)
     except RuntimeError as e:
         # e.g. missing API key — surface it clearly instead of a 500 stacktrace.
         raise HTTPException(status_code=500, detail=str(e))
