@@ -1,4 +1,34 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
+
+type Severity = 'high' | 'med' | 'low'
+type DatasetTag = '311' | 'hpd' | 'dob' | 'rodent'
+type ReportStatus = 'idle' | 'loading' | 'done' | 'error'
+type ChatStatus = 'idle' | 'loading' | 'done'
+
+type Issue = {
+  tag: DatasetTag
+  severity: Severity
+  text: string
+}
+
+type Report = {
+  address: string
+  bbl: string
+  grade: string
+  headline: string
+  issues: Issue[]
+  counts: Partial<{
+    c311: number
+    hpd: number
+    dob: number
+    rodent: number
+  }>
+}
+
+type Message = {
+  role: 'user' | 'assistant'
+  text: string
+}
 
 const SEVERITY = {
   high: { label: 'High', className: 'sev sev-high' },
@@ -14,7 +44,7 @@ const DATASET_LABEL = {
 }
 
 // hard coded sample data to be returned to the frontend after reading visible text on apartment page
-const SAMPLE_REPORT = {
+const SAMPLE_REPORT: Report = {
   address: '123 Sample Avenue, Brooklyn, NY 11215',
   bbl: '3012347501',
   grade: 'B',
@@ -28,7 +58,7 @@ const SAMPLE_REPORT = {
 }
 
 // chat bot sample responses
-const SAMPLE_ANSWERS = [
+const SAMPLE_ANSWERS: Array<{ matches: string[]; answer: string }> = [
   {
     matches: ['heat', 'warm', 'hot water'],
     answer: 'The records suggest this is worth asking about. Several heat and hot-water complaints were reported during winter months, so ask the landlord how quickly those issues were resolved and whether the building has a recent heating inspection.',
@@ -44,12 +74,12 @@ const SAMPLE_ANSWERS = [
 ]
 
 export default function App() {
-  const [status, setStatus] = useState('idle') // idle | loading | done | error
-  const [report, setReport] = useState(null)
-  const [error, setError] = useState(null)
+  const [status, setStatus] = useState<ReportStatus>('idle')
+  const [report, setReport] = useState<Report | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [question, setQuestion] = useState('')
-  const [messages, setMessages] = useState([])
-  const [chatStatus, setChatStatus] = useState('idle')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [chatStatus, setChatStatus] = useState<ChatStatus>('idle')
 
   function analyze() {
     setStatus('loading')
@@ -77,7 +107,7 @@ export default function App() {
     }, 500)
   }
 
-  function askQuestion(event) {
+  function askQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const trimmedQuestion = question.trim()
     if (!trimmedQuestion || chatStatus === 'loading') return
@@ -141,7 +171,15 @@ export default function App() {
   )
 }
 
-function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }) {
+type ChatProps = {
+  messages: Message[]
+  question: string
+  chatStatus: ChatStatus
+  onQuestionChange: (value: string) => void
+  onAsk: (event: FormEvent<HTMLFormElement>) => void
+}
+
+function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }: ChatProps) {
   return (
     <section className="chat" aria-labelledby="chat-title">
       <div className="chat-head">
@@ -167,7 +205,7 @@ function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }) {
         <input
           aria-label="Ask a question about this building"
           value={question}
-          onChange={(event) => onQuestionChange(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => onQuestionChange(event.target.value)}
           placeholder="Is the heat reliable?"
           disabled={chatStatus === 'loading'}
         />
@@ -180,7 +218,7 @@ function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }) {
   )
 }
 
-function ReportCard({ report }) {
+function ReportCard({ report }: { report: Report }) {
   const { address, bbl, grade, headline, issues = [], counts = {} } = report
   return (
     <div className="card">
@@ -219,7 +257,7 @@ function ReportCard({ report }) {
   )
 }
 
-function Count({ label, n }) {
+function Count({ label, n }: { label: string; n?: number }) {
   return (
     <div className="count">
       <div className="count-n">{n ?? '–'}</div>
@@ -228,7 +266,7 @@ function Count({ label, n }) {
   )
 }
 
-function gradeClass(grade = '') {
+function gradeClass(grade = ''): string {
   const g = grade[0]?.toUpperCase()
   if (g === 'A') return 'a'
   if (g === 'B') return 'b'
