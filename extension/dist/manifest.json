@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Building Report Card",
+  "version": "0.1.0",
+  "description": "Honest NYC building intel on any Zillow / StreetEasy listing.",
+  "action": {
+    "default_title": "Open Building Report Card"
+  },
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/panel/index.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.zillow.com/*",
+    "https://*.streeteasy.com/*",
+    "http://localhost/*"
+  ]
+}
