@@ -43,6 +43,13 @@ const DATASET_LABEL = {
   rodent: 'Rodent',
 }
 
+const DATASET_INFO = {
+  '311': { name: 'NYC 311', description: 'Housing complaints' },
+  hpd: { name: 'Housing Preservation and Development (HPD)', description: 'Housing conditions and violations' },
+  dob: { name: 'Department of Buildings (DOB)', description: 'Structural safety' },
+  rodent: { name: 'Rodent inspections', description: 'Pest activity and inspections' },
+}
+
 // hard coded sample data to be returned to the frontend after reading visible text on apartment page
 const SAMPLE_REPORT: Report = {
   address: '123 Sample Avenue, Brooklyn, NY 11215',
@@ -241,7 +248,7 @@ function ReportCard({ report }: { report: Report }) {
       <ul className="issues">
         {issues.map((it, i) => (
           <li key={i} className="issue">
-            <span className="tag">{DATASET_LABEL[it.tag] || it.tag}</span>
+            <span className="tag" title={`${DATASET_INFO[it.tag].name}: ${DATASET_INFO[it.tag].description}`}>{DATASET_LABEL[it.tag] || it.tag}</span>
             <span className="issue-text">{it.text}</span>
             <span className={(SEVERITY[it.severity] || SEVERITY.low).className}>
               {(SEVERITY[it.severity] || SEVERITY.low).label}
@@ -254,20 +261,34 @@ function ReportCard({ report }: { report: Report }) {
       </ul>
 
       <div className="counts">
-        <Count label="311" n={counts.c311} />
-        <Count label="HPD" n={counts.hpd} />
-        <Count label="DOB" n={counts.dob} />
-        <Count label="Rodent" n={counts.rodent} />
+        <Count info={DATASET_INFO.dob} n={counts.dob} />
+        <Count info={DATASET_INFO.hpd} n={counts.hpd} />
+        <Count info={DATASET_INFO['311']} n={counts.c311} />
+        <Count info={DATASET_INFO.rodent} n={counts.rodent} />
       </div>
     </div>
   )
 }
 
-function Count({ label, n }: { label: string; n?: number }) {
+function normalizeReport(data: BackendReport): Report {
+  return {
+    address: data.address || 'Address unavailable',
+    bbl: data.bbl || '',
+    grade: data.grade || data.eval?.grade || 'N/A',
+    headline: data.headline || data.gemini?.headline || '',
+    evaluation: data.evaluation || data.eval,
+    analysis: data.analysis || data.gemini,
+    issues: data.issues || [],
+    counts: data.counts || {},
+  }
+}
+
+function Count({ info, n }: { info: { name: string; description: string }; n?: number }) {
   return (
-    <div className="count">
+    <div className="count" title={`${info.name}: ${info.description}`}>
       <div className="count-n">{n ?? '–'}</div>
-      <div className="count-l">{label}</div>
+      <div className="count-name">{info.name}</div>
+      <div className="count-meaning">{info.description}</div>
     </div>
   )
 }

@@ -63,7 +63,7 @@ h1 {
 }
 .tagline {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3);
 }
 
@@ -155,7 +155,7 @@ h1 {
   font-weight: 600;
 }
 .bbl {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -164,6 +164,117 @@ h1 {
   margin: 0;
   font-size: 14px;
   color: var(--ink-2);
+}
+
+.evaluation,
+.analysis {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.evaluation-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-label {
+  display: block;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.score {
+  display: block;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.score small {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.confidence,
+.direction {
+  color: var(--ink-3);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.categories,
+.explanations {
+  display: grid;
+  gap: 9px;
+}
+
+.category-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.category-head strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.category-track {
+  height: 5px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+
+.category-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--good);
+}
+
+.direction {
+  display: block;
+  margin-top: 2px;
+}
+
+.analysis h2 {
+  margin: 4px 0 5px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.analysis p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.explanations {
+  margin-top: 12px;
+}
+
+.explanations strong {
+  font-size: 12px;
+}
+
+.explanations p {
+  margin-top: 1px;
+  font-size: 13px;
+}
+
+.caveats {
+  margin: 12px 0 0;
+  padding-left: 17px;
+  color: var(--ink-3);
+  font-size: 12px;
 }
 
 .issues {
@@ -237,11 +348,18 @@ h1 {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.count-l {
-  font-size: 10px;
+.count-name {
+  margin-top: 3px;
   color: var(--ink-3);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.count-meaning {
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 /* ---- chat ---- */
@@ -273,7 +391,7 @@ h1 {
 }
 .chat-status {
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .messages {
@@ -339,5 +457,5 @@ h1 {
 .chat-note {
   margin: 9px 0 0;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 12px;
 }
