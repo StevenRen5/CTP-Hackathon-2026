@@ -85,26 +85,32 @@ export default function App() {
     setStatus('loading')
     setError(null)
 
-    // Restore this request when the backend is available.
-    // chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
-    //   if (chrome.runtime.lastError) {
-    //     setStatus('error')
-    //     setError(chrome.runtime.lastError.message)
-    //     return
-    //   }
-    //   if (!resp?.ok) {
-    //     setStatus('error')
-    //     setError(resp?.error || 'Unknown error')
-    //     return
-    //   }
-    //   setReport(resp.data)
-    //   setStatus('done')
-    // })
+    // Ask the service worker to grab the current tab's URL + text and run it
+    // through the backend /extract endpoint.
+    chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
+      if (chrome.runtime.lastError) {
+        setStatus('error')
+        setError(chrome.runtime.lastError.message ?? 'Extension messaging error')
+        return
+      }
+      if (!resp?.ok) {
+        setStatus('error')
+        setError(resp?.error || 'Unknown error')
+        return
+      }
 
-    window.setTimeout(() => {
-      setReport(SAMPLE_REPORT)
+      const extracted = resp.data as { found: boolean; full_address: string }
+      if (!extracted.found || !extracted.full_address) {
+        setStatus('error')
+        setError('Could not find a property address on this page.')
+        return
+      }
+
+      // Only the address is real for now; the rest is still sample data until
+      // the /records + analysis pieces are wired in.
+      setReport({ ...SAMPLE_REPORT, address: extracted.full_address })
       setStatus('done')
-    }, 500)
+    })
   }
 
   function askQuestion(event: FormEvent<HTMLFormElement>) {

@@ -1,6 +1,6 @@
 // Service worker: the extension's only bridge to the backend.
-// The side panel asks it to analyze the current tab; it grabs the page text,
-// POSTs to FastAPI, and returns the report card JSON.
+// The side panel asks it to analyze the current tab; it grabs the page URL +
+// text, POSTs to FastAPI /extract, and returns the structured address.
 
 const BACKEND = 'http://localhost:8000'
 
@@ -10,9 +10,13 @@ chrome.sidePanel
   .catch((err) => console.error('[BRC] sidePanel behavior:', err))
 
 // Runs *inside* the listing page. Keep it dependency-free — it's injected as a
-// standalone function, not bundled. innerText sidesteps Zillow's obfuscated JSON.
-function grabPageText() {
-  return document.body.innerText.slice(0, 20000)
+// standalone function, not bundled. The URL is the primary signal (Zillow puts
+// the address in the /homedetails/ slug); innerText is a fallback.
+function grabPage() {
+  return {
+    url: location.href,
+    text: document.body.innerText.slice(0, 20000),
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -26,19 +30,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       })
       if (!tab?.id) throw new Error('No active tab found.')
 
-      const [{ result: pageText }] = await chrome.scripting.executeScript({
+      const [{ result: page }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: grabPageText,
+        func: grabPage,
       })
+      console.log('[BRC] grabbed URL:', page.url)
 
-      const res = await fetch(`${BACKEND}/report`, {
+      const res = await fetch(`${BACKEND}/extract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page_text: pageText }),
+        body: JSON.stringify({ page_text: page.text, page_url: page.url }),
       })
       if (!res.ok) throw new Error(`Backend ${res.status}`)
 
-      sendResponse({ ok: true, data: await res.json() })
+      const data = await res.json()
+      console.log('[BRC] extracted address:', data.full_address)
+
+      sendResponse({ ok: true, data })
     } catch (err) {
       console.error('[BRC] analyze failed:', err)
       sendResponse({ ok: false, error: String(err?.message || err) })
