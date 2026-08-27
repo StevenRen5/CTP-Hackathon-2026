@@ -41,9 +41,9 @@ Zillow Group  ·  About  ·  Privacy  ·  Terms
 """
 
 
-def main():
+async def main():
     print("Extracting address from sample page text...\n")
-    result = extract_address(SAMPLE_PAGE_TEXT)
+    result = await extract_address(SAMPLE_PAGE_TEXT)
     print(f"  found       : {result.found}")
     print(f"  full_address: {result.full_address}")
     print(f"  street      : {result.street}")
@@ -61,4 +61,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    asyncio.run(main())

@@ -71,11 +71,14 @@ Listing page text:
 ---"""
 
 
-def extract_address(page_text: str, page_url: str = "") -> ExtractedAddress:
+async def extract_address(page_text: str, page_url: str = "") -> ExtractedAddress:
     """Extract the primary listing address.
 
     The page URL is the primary signal (Zillow puts the address in the
     /homedetails/ slug); page_text is a fallback for pages without it.
+
+    Async so it plays nicely inside the async FastAPI server — the sync
+    google-genai client hangs when called from FastAPI's threadpool.
     """
     client = _get_client()
     prompt = _PROMPT.format(
@@ -83,7 +86,7 @@ def extract_address(page_text: str, page_url: str = "") -> ExtractedAddress:
         page_text=page_text[:20000],
     )
 
-    resp = client.models.generate_content(
+    resp = await client.aio.models.generate_content(
         model=MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
