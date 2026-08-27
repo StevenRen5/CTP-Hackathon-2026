@@ -1,6 +1,6 @@
 // Service worker: the extension's only bridge to the backend.
 // The side panel asks it to analyze the current tab; it grabs the page URL +
-// text, POSTs to FastAPI /extract, and returns the structured address.
+// text, POSTs to FastAPI /report, and returns the full graded report card.
 
 const BACKEND = 'http://localhost:8000'
 
@@ -36,15 +36,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       })
       console.log('[BRC] grabbed URL:', page.url)
 
-      const res = await fetch(`${BACKEND}/extract`, {
+      const res = await fetch(`${BACKEND}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ page_text: page.text, page_url: page.url }),
       })
-      if (!res.ok) throw new Error(`Backend ${res.status}`)
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null)
+        throw new Error(detail?.detail || `Backend ${res.status}`)
+      }
 
       const data = await res.json()
-      console.log('[BRC] extracted address:', data.full_address)
+      console.log('[BRC] report:', data.address, '->', data.grade)
 
       sendResponse({ ok: true, data })
     } catch (err) {

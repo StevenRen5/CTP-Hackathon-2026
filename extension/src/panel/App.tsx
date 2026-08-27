@@ -1,28 +1,34 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 
-type Severity = 'high' | 'med' | 'low'
-type DatasetTag = '311' | 'hpd' | 'dob' | 'rodent'
 type ReportStatus = 'idle' | 'loading' | 'done' | 'error'
 type ChatStatus = 'idle' | 'loading' | 'done'
 
-type Issue = {
-  tag: DatasetTag
-  severity: Severity
-  text: string
+type Category = {
+  score: number
+  max: number
+  direction?: string
+  explanation: string
 }
 
 type Report = {
   address: string
   bbl: string
+  units: number | null
   grade: string
+  score: number
+  confidence: string
   headline: string
-  issues: Issue[]
-  counts: Partial<{
-    c311: number
-    hpd: number
-    dob: number
-    rodent: number
-  }>
+  summary: string
+  prospects: string
+  caveats: string[]
+  categories: {
+    safety: Category
+    building_conditions: Category
+    pests: Category
+    responsiveness: Category
+    trend: Category
+  }
+  counts: Partial<{ c311: number; hpd: number; dob: number; rodent: number }>
 }
 
 type Message = {
@@ -30,46 +36,42 @@ type Message = {
   text: string
 }
 
-const SEVERITY = {
-  high: { label: 'High', className: 'sev sev-high' },
-  med: { label: 'Medium', className: 'sev sev-med' },
-  low: { label: 'Low', className: 'sev sev-low' },
+const CATEGORY_LABEL: Record<keyof Report['categories'], string> = {
+  safety: 'Safety',
+  building_conditions: 'Building conditions',
+  pests: 'Pests',
+  responsiveness: 'Responsiveness',
+  trend: 'Recent trend',
 }
 
-const DATASET_LABEL = {
-  '311': '311',
-  hpd: 'HPD',
-  dob: 'DOB',
-  rodent: 'Rodent',
+const CATEGORY_ORDER: Array<keyof Report['categories']> = [
+  'safety',
+  'building_conditions',
+  'pests',
+  'responsiveness',
+  'trend',
+]
+
+const DATASET_INFO = {
+  '311': { name: 'NYC 311', description: 'Housing complaints' },
+  hpd: { name: 'HPD', description: 'Housing violations' },
+  dob: { name: 'DOB', description: 'Building permits' },
+  rodent: { name: 'Rodent', description: 'Pest inspections' },
 }
 
-// hard coded sample data to be returned to the frontend after reading visible text on apartment page
-const SAMPLE_REPORT: Report = {
-  address: '123 Sample Avenue, Brooklyn, NY 11215',
-  bbl: '3012347501',
-  grade: 'B',
-  headline: 'Generally well-maintained building with a few issues worth asking about.',
-  issues: [
-    { tag: '311', severity: 'med', text: 'Several heat and hot-water complaints were reported during winter months.' },
-    { tag: 'hpd', severity: 'low', text: 'A small number of apartment maintenance complaints appear in the record.' },
-    { tag: 'dob', severity: 'low', text: 'No recent major construction violations were found.' },
-  ],
-  counts: { c311: 14, hpd: 3, dob: 1, rodent: 0 },
-}
-
-// chat bot sample responses
+// chat bot sample responses (chat has no backend endpoint yet)
 const SAMPLE_ANSWERS: Array<{ matches: string[]; answer: string }> = [
   {
     matches: ['heat', 'warm', 'hot water'],
-    answer: 'The records suggest this is worth asking about. Several heat and hot-water complaints were reported during winter months, so ask the landlord how quickly those issues were resolved and whether the building has a recent heating inspection.',
+    answer: 'The records suggest this is worth asking about. Heat and hot-water complaints appear in the building record, so ask the landlord how quickly those issues were resolved and whether there is a recent heating inspection.',
   },
   {
     matches: ['noise', 'noisy', 'loud'],
-    answer: 'The available building records do not measure everyday street noise. This listing is on a residential Brooklyn block, so visit at two different times of day and ask a current resident about traffic, nightlife, and construction noise.',
+    answer: 'The available building records do not measure everyday street noise. Visit at two different times of day and ask a current resident about traffic, nightlife, and construction noise.',
   },
   {
     matches: ['safe', 'safety', 'crime'],
-    answer: 'This report does not include a crime or personal-safety score. It shows a small number of maintenance records, but you should still visit the block and check current neighborhood data before deciding.',
+    answer: 'This report reflects housing-condition records, not a crime or personal-safety score. Check current neighborhood data and visit the block before deciding.',
   },
 ]
 
@@ -85,8 +87,8 @@ export default function App() {
     setStatus('loading')
     setError(null)
 
-    // Ask the service worker to grab the current tab's URL + text and run it
-    // through the backend /extract endpoint.
+    // Ask the service worker to grab the current tab and run the full pipeline
+    // (extract -> records -> score -> explanation) via the backend /report.
     chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
       if (chrome.runtime.lastError) {
         setStatus('error')
@@ -98,17 +100,7 @@ export default function App() {
         setError(resp?.error || 'Unknown error')
         return
       }
-
-      const extracted = resp.data as { found: boolean; full_address: string }
-      if (!extracted.found || !extracted.full_address) {
-        setStatus('error')
-        setError('Could not find a property address on this page.')
-        return
-      }
-
-      // Only the address is real for now; the rest is still sample data until
-      // the /records + analysis pieces are wired in.
-      setReport({ ...SAMPLE_REPORT, address: extracted.full_address })
+      setReport(resp.data as Report)
       setStatus('done')
     })
   }
@@ -151,7 +143,7 @@ export default function App() {
         <div className="error">
           <strong>Couldn’t build the report.</strong>
           <p>{error}</p>
-          <p className="hint">Is the backend running on localhost:8000?</p>
+          <p className="hint">Make sure the backend is running on localhost:8000, and you’re on a NYC listing.</p>
         </div>
       )}
 
@@ -225,49 +217,74 @@ function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }: ChatP
 }
 
 function ReportCard({ report }: { report: Report }) {
-  const { address, bbl, grade, headline, issues = [], counts = {} } = report
+  const { address, bbl, units, grade, score, confidence, headline, summary, caveats = [], categories, counts = {} } = report
   return (
     <div className="card">
       <div className="card-head">
         <div className={`grade grade-${gradeClass(grade)}`}>{grade}</div>
         <div className="addr">
           <div className="addr-line">{address}</div>
+          <div className="addr-meta">
+            {typeof score === 'number' && <span>Score {score}/100</span>}
+            {units != null && <span>{units} units</span>}
+            {confidence && <span>{confidence} confidence</span>}
+          </div>
           {bbl && <div className="bbl">BBL {bbl}</div>}
         </div>
       </div>
 
       {headline && <p className="headline">{headline}</p>}
+      {summary && <p className="summary">{summary}</p>}
 
-      <ul className="issues">
-        {issues.map((it, i) => (
-          <li key={i} className="issue">
-            <span className="tag">{DATASET_LABEL[it.tag] || it.tag}</span>
-            <span className="issue-text">{it.text}</span>
-            <span className={(SEVERITY[it.severity] || SEVERITY.low).className}>
-              {(SEVERITY[it.severity] || SEVERITY.low).label}
-            </span>
-          </li>
+      <div className="categories">
+        {CATEGORY_ORDER.map((key) => (
+          <CategoryBar key={key} label={CATEGORY_LABEL[key]} category={categories[key]} />
         ))}
-        {issues.length === 0 && (
-          <li className="issue none">No notable issues on record. 🎉</li>
-        )}
-      </ul>
+      </div>
 
       <div className="counts">
-        <Count label="311" n={counts.c311} />
-        <Count label="HPD" n={counts.hpd} />
-        <Count label="DOB" n={counts.dob} />
-        <Count label="Rodent" n={counts.rodent} />
+        <Count info={DATASET_INFO['311']} n={counts.c311} />
+        <Count info={DATASET_INFO.hpd} n={counts.hpd} />
+        <Count info={DATASET_INFO.dob} n={counts.dob} />
+        <Count info={DATASET_INFO.rodent} n={counts.rodent} />
       </div>
+
+      {caveats.length > 0 && (
+        <ul className="caveats">
+          {caveats.map((c, i) => (
+            <li key={i}>{c}</li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-function Count({ label, n }: { label: string; n?: number }) {
+function CategoryBar({ label, category }: { label: string; category: Category }) {
+  const ratio = category.max > 0 ? category.score / category.max : 0
+  const level = ratio >= 0.7 ? 'good' : ratio >= 0.4 ? 'warn' : 'crit'
   return (
-    <div className="count">
+    <div className="cat">
+      <div className="cat-top">
+        <span className="cat-name">{label}</span>
+        <span className="cat-score">
+          {category.score}
+          <span className="cat-max">/{category.max}</span>
+        </span>
+      </div>
+      <div className="cat-track">
+        <div className={`cat-fill cat-${level}`} style={{ width: `${Math.round(ratio * 100)}%` }} />
+      </div>
+      {category.explanation && <p className="cat-text">{category.explanation}</p>}
+    </div>
+  )
+}
+
+function Count({ info, n }: { info: { name: string; description: string }; n?: number }) {
+  return (
+    <div className="count" title={`${info.name}: ${info.description}`}>
       <div className="count-n">{n ?? '–'}</div>
-      <div className="count-l">{label}</div>
+      <div className="count-name">{info.name}</div>
     </div>
   )
 }
@@ -277,5 +294,6 @@ function gradeClass(grade = ''): string {
   if (g === 'A') return 'a'
   if (g === 'B') return 'b'
   if (g === 'C') return 'c'
-  return 'd'
+  if (g === 'D') return 'd'
+  return 'f'
 }
