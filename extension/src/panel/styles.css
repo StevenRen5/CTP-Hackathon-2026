@@ -341,3 +341,98 @@ h1 {
   color: var(--ink-3);
   font-size: 11px;
 }
+
+/* ---- finished report card: score meta, categories, caveats ---- */
+.grade-f {
+  background: var(--crit);
+}
+
+.addr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink-3);
+  text-transform: capitalize;
+}
+.addr-meta span {
+  white-space: nowrap;
+}
+
+.summary {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+.cat-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.cat-score {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.cat-max {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.cat-track {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.cat-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.3s ease;
+}
+.cat-good { background: var(--good); }
+.cat-warn { background: var(--warn); }
+.cat-crit { background: var(--crit); }
+.cat-text {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+.count-name {
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.caveats {
+  margin: 0;
+  padding-left: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.caveats li {
+  font-size: 11px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}

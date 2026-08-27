@@ -5,6 +5,7 @@ address. This is the 'scrape' step done by an LLM instead of a DOM parser, so
 Zillow layout changes don't break it.
 """
 
+import json
 import os
 from google import genai
 from google.genai import types
@@ -110,3 +111,41 @@ async def extract_address(page_text: str, page_url: str = "") -> ExtractedAddres
     print("[extract] ---------------------------------------------\n")
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Chat — answer a renter's freeform question grounded in the building's records
+# ---------------------------------------------------------------------------
+
+_CHAT_PROMPT = """A prospective renter is asking about a specific NYC building. \
+Answer ONLY from its public records below — never invent facts.
+
+Building: {address}
+Record counts (full history): {counts}
+Records (a recent sample, newest first): {items}
+
+Question: {question}
+
+Rules:
+- Answer in 2–4 sentences, plain English, no violation codes.
+- A complaint is a report, not a confirmed condition — say "reported", not "confirmed".
+- If the records don't cover the question (street noise, crime, rent price, etc.), \
+say the public records don't measure that and suggest what the renter could check instead.
+- Don't state a grade or score; just answer the question from the facts."""
+
+
+async def answer_question(building: dict, counts: dict, items: list, question: str) -> str:
+    """Answer a freeform question grounded in the building's NYC records."""
+    client = _get_client()
+    prompt = _CHAT_PROMPT.format(
+        address=building.get("address", "Unknown"),
+        counts=json.dumps(counts),
+        items=json.dumps(items[:60], ensure_ascii=False),
+        question=question,
+    )
+    resp = await client.aio.models.generate_content(
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=0.3),
+    )
+    return (resp.text or "").strip()

@@ -1,6 +1,6 @@
 // Service worker: the extension's only bridge to the backend.
-// The side panel asks it to analyze the current tab; it grabs the page URL +
-// text, POSTs to FastAPI /extract, and returns the structured address.
+//  ANALYZE — grab the current tab's URL + text, POST /report, return the card.
+//  CHAT    — POST /chat with an address + question, return the answer.
 
 const BACKEND = 'http://localhost:8000'
 
@@ -19,39 +19,54 @@ function grabPage() {
   }
 }
 
+async function post(path, body) {
+  const res = await fetch(`${BACKEND}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null)
+    throw new Error(detail?.detail || `Backend ${res.status}`)
+  }
+  return res.json()
+}
+
+async function handleAnalyze() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+  if (!tab?.id) throw new Error('No active tab found.')
+
+  const [{ result: page }] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: grabPage,
+  })
+  console.log('[BRC] grabbed URL:', page.url)
+
+  const data = await post('/report', { page_text: page.text, page_url: page.url })
+  console.log('[BRC] report:', data.address, '->', data.grade)
+  return data
+}
+
+async function handleChat(address, question) {
+  return post('/chat', { address, question })
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== 'ANALYZE') return
+  const work =
+    msg?.type === 'ANALYZE'
+      ? handleAnalyze()
+      : msg?.type === 'CHAT'
+        ? handleChat(msg.address, msg.question)
+        : null
 
-  ;(async () => {
-    try {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        lastFocusedWindow: true,
-      })
-      if (!tab?.id) throw new Error('No active tab found.')
+  if (!work) return
 
-      const [{ result: page }] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: grabPage,
-      })
-      console.log('[BRC] grabbed URL:', page.url)
-
-      const res = await fetch(`${BACKEND}/extract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page_text: page.text, page_url: page.url }),
-      })
-      if (!res.ok) throw new Error(`Backend ${res.status}`)
-
-      const data = await res.json()
-      console.log('[BRC] extracted address:', data.full_address)
-
-      sendResponse({ ok: true, data })
-    } catch (err) {
-      console.error('[BRC] analyze failed:', err)
+  work
+    .then((data) => sendResponse({ ok: true, data }))
+    .catch((err) => {
+      console.error('[BRC]', msg.type, 'failed:', err)
       sendResponse({ ok: false, error: String(err?.message || err) })
-    }
-  })()
+    })
 
   return true // keep the message channel open for the async reply
 })
