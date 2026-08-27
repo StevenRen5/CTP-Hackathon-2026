@@ -13,6 +13,19 @@ const DATASET_LABEL = {
   rodent: 'Rodent',
 }
 
+const SAMPLE_REPORT = {
+  address: '123 Sample Avenue, Brooklyn, NY 11215',
+  bbl: '3012347501',
+  grade: 'B',
+  headline: 'Generally well-maintained building with a few issues worth asking about.',
+  issues: [
+    { tag: '311', severity: 'med', text: 'Several heat and hot-water complaints were reported during winter months.' },
+    { tag: 'hpd', severity: 'low', text: 'A small number of apartment maintenance complaints appear in the record.' },
+    { tag: 'dob', severity: 'low', text: 'No recent major construction violations were found.' },
+  ],
+  counts: { c311: 14, hpd: 3, dob: 1, rodent: 0 },
+}
+
 export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | done | error
   const [report, setReport] = useState(null)
@@ -21,20 +34,27 @@ export default function App() {
   function analyze() {
     setStatus('loading')
     setError(null)
-    chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
-      if (chrome.runtime.lastError) {
-        setStatus('error')
-        setError(chrome.runtime.lastError.message)
-        return
-      }
-      if (!resp?.ok) {
-        setStatus('error')
-        setError(resp?.error || 'Unknown error')
-        return
-      }
-      setReport(resp.data)
+
+    // Restore this request when the backend is available.
+    // chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
+    //   if (chrome.runtime.lastError) {
+    //     setStatus('error')
+    //     setError(chrome.runtime.lastError.message)
+    //     return
+    //   }
+    //   if (!resp?.ok) {
+    //     setStatus('error')
+    //     setError(resp?.error || 'Unknown error')
+    //     return
+    //   }
+    //   setReport(resp.data)
+    //   setStatus('done')
+    // })
+
+    window.setTimeout(() => {
+      setReport(SAMPLE_REPORT)
       setStatus('done')
-    })
+    }, 500)
   }
 
   return (
