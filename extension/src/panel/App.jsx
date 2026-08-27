@@ -105,8 +105,58 @@ export default function App() {
         </p>
       )}
 
-      {status === 'done' && report && <ReportCard report={report} />}
+      {status === 'done' && report && (
+        <>
+          <ReportCard report={report} />
+          <Chat
+            messages={messages}
+            question={question}
+            chatStatus={chatStatus}
+            onQuestionChange={setQuestion}
+            onAsk={askQuestion}
+          />
+        </>
+      )}
     </div>
+  )
+}
+
+function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }) {
+  return (
+    <section className="chat" aria-labelledby="chat-title">
+      <div className="chat-head">
+        <div>
+          <p className="eyebrow">Ask about this building</p>
+          <h2 id="chat-title">What else do you want to know?</h2>
+        </div>
+        <span className="chat-status">Sample answers</span>
+      </div>
+
+      {messages.length > 0 && (
+        <div className="messages" aria-live="polite">
+          {messages.map((message, index) => (
+            <div key={`${message.role}-${index}`} className={`message message-${message.role}`}>
+              <span className="message-label">{message.role === 'user' ? 'You' : 'Report'}</span>
+              <p>{message.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form className="chat-form" onSubmit={onAsk}>
+        <input
+          aria-label="Ask a question about this building"
+          value={question}
+          onChange={(event) => onQuestionChange(event.target.value)}
+          placeholder="Is the heat reliable?"
+          disabled={chatStatus === 'loading'}
+        />
+        <button type="submit" disabled={!question.trim() || chatStatus === 'loading'}>
+          {chatStatus === 'loading' ? '...' : 'Ask'}
+        </button>
+      </form>
+      <p className="chat-note">Answers are based on the current report.</p>
+    </section>
   )
 }
 
