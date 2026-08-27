@@ -1,0 +1,16 @@
+{
+  "headline": "Building Report Card: Grade F",
+  "summary": "This building received an overall score of 27 out of 100, resulting in a failing grade. The assessment reflects medium confidence based on the available data.",
+  "category_explanations": {
+    "safety": "There are 1 recent open HPD Class C violation and 4 recent open HPD Class B violations recorded.",
+    "building_conditions": "Records show 3 recent open HPD Class C violations, 1 recent open HPD Class B violation, and 7 recent 311 reports.",
+    "pests": "There was 1 recent bait treatment recorded.",
+    "responsiveness": "Out of 17 recent actionable records, 7 were resolved and 10 unresolved violations were past the listed correction date.",
+    "trend": "The recent data indicates a worsening direction."
+  },
+  "prospects": "worsening",
+  "caveats": [
+    "The assessment uses available public records.",
+    "Only the most recent returned records were analyzed for: c311, hpd."
+  ]
+}
