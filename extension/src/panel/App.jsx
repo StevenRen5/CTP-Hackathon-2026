@@ -77,6 +77,26 @@ export default function App() {
     }, 500)
   }
 
+  function askQuestion(event) {
+    event.preventDefault()
+    const trimmedQuestion = question.trim()
+    if (!trimmedQuestion || chatStatus === 'loading') return
+
+    setMessages((current) => [...current, { role: 'user', text: trimmedQuestion }])
+    setQuestion('')
+    setChatStatus('loading')
+
+    window.setTimeout(() => {
+      const normalizedQuestion = trimmedQuestion.toLowerCase()
+      const matchedAnswer = SAMPLE_ANSWERS.find(({ matches }) =>
+        matches.some((match) => normalizedQuestion.includes(match)),
+      )
+      const answer = matchedAnswer?.answer || 'I do not have enough building-specific data to answer that yet. Try asking about heat, hot water, noise, maintenance, or safety.'
+      setMessages((current) => [...current, { role: 'assistant', text: answer }])
+      setChatStatus('done')
+    }, 450)
+  }
+
   return (
     <div className="app">
       <header className="topbar">
