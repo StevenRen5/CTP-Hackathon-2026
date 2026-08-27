@@ -27,10 +27,29 @@ const SAMPLE_REPORT = {
   counts: { c311: 14, hpd: 3, dob: 1, rodent: 0 },
 }
 
+// chat bot sample responses
+const SAMPLE_ANSWERS = [
+  {
+    matches: ['heat', 'warm', 'hot water'],
+    answer: 'The records suggest this is worth asking about. Several heat and hot-water complaints were reported during winter months, so ask the landlord how quickly those issues were resolved and whether the building has a recent heating inspection.',
+  },
+  {
+    matches: ['noise', 'noisy', 'loud'],
+    answer: 'The available building records do not measure everyday street noise. This listing is on a residential Brooklyn block, so visit at two different times of day and ask a current resident about traffic, nightlife, and construction noise.',
+  },
+  {
+    matches: ['safe', 'safety', 'crime'],
+    answer: 'This report does not include a crime or personal-safety score. It shows a small number of maintenance records, but you should still visit the block and check current neighborhood data before deciding.',
+  },
+]
+
 export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | done | error
   const [report, setReport] = useState(null)
   const [error, setError] = useState(null)
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState([])
+  const [chatStatus, setChatStatus] = useState('idle')
 
   function analyze() {
     setStatus('loading')
