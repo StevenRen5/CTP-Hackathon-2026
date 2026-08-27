@@ -1,0 +1,28 @@
+{
+  "score": 27,
+  "grade": "F",
+  "confidence": "medium",
+  "categories": {
+    "safety": {
+      "score": 6,
+      "max": 35
+    },
+    "building_conditions": {
+      "score": 5,
+      "max": 25
+    },
+    "pests": {
+      "score": 10,
+      "max": 15
+    },
+    "responsiveness": {
+      "score": 6,
+      "max": 15
+    },
+    "trend": {
+      "score": 0,
+      "max": 10,
+      "direction": "worsening"
+    }
+  }
+}
