@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from eval import evaluate_property
-from gemini import extract_address
+from gemini import answer_question, extract_address
 from gemini_eval import explain_evaluation
 from nyc import fetch_building_records
 
@@ -148,3 +148,33 @@ async def report(body: PageIn):
         "categories": _merge_categories(evaluation, explanation),
         "counts": records["counts"],
     }
+
+
+class ChatIn(BaseModel):
+    address: str
+    question: str
+
+
+@app.post("/chat")
+async def chat(body: ChatIn):
+    """Answer a freeform question grounded in the building's NYC records."""
+    if not body.question.strip():
+        raise HTTPException(status_code=400, detail="question is empty")
+    if not body.address.strip():
+        raise HTTPException(status_code=400, detail="address is empty")
+
+    try:
+        records = await fetch_building_records(body.address, limit=40)
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream NYC data error: {e}")
+
+    if not records["resolved"]:
+        raise HTTPException(status_code=404, detail="Couldn't match that address to an NYC building.")
+
+    try:
+        answer = await answer_question(
+            records["building"], records["counts"], records["items"], body.question
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"answer": answer}

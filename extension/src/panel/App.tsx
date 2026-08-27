@@ -59,22 +59,6 @@ const DATASET_INFO = {
   rodent: { name: 'Rodent', description: 'Pest inspections' },
 }
 
-// chat bot sample responses (chat has no backend endpoint yet)
-const SAMPLE_ANSWERS: Array<{ matches: string[]; answer: string }> = [
-  {
-    matches: ['heat', 'warm', 'hot water'],
-    answer: 'The records suggest this is worth asking about. Heat and hot-water complaints appear in the building record, so ask the landlord how quickly those issues were resolved and whether there is a recent heating inspection.',
-  },
-  {
-    matches: ['noise', 'noisy', 'loud'],
-    answer: 'The available building records do not measure everyday street noise. Visit at two different times of day and ask a current resident about traffic, nightlife, and construction noise.',
-  },
-  {
-    matches: ['safe', 'safety', 'crime'],
-    answer: 'This report reflects housing-condition records, not a crime or personal-safety score. Check current neighborhood data and visit the block before deciding.',
-  },
-]
-
 export default function App() {
   const [status, setStatus] = useState<ReportStatus>('idle')
   const [report, setReport] = useState<Report | null>(null)
@@ -108,21 +92,26 @@ export default function App() {
   function askQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const trimmedQuestion = question.trim()
-    if (!trimmedQuestion || chatStatus === 'loading') return
+    if (!trimmedQuestion || chatStatus === 'loading' || !report) return
 
     setMessages((current) => [...current, { role: 'user', text: trimmedQuestion }])
     setQuestion('')
     setChatStatus('loading')
 
-    window.setTimeout(() => {
-      const normalizedQuestion = trimmedQuestion.toLowerCase()
-      const matchedAnswer = SAMPLE_ANSWERS.find(({ matches }) =>
-        matches.some((match) => normalizedQuestion.includes(match)),
-      )
-      const answer = matchedAnswer?.answer || 'I do not have enough building-specific data to answer that yet. Try asking about heat, hot water, noise, maintenance, or safety.'
-      setMessages((current) => [...current, { role: 'assistant', text: answer }])
-      setChatStatus('done')
-    }, 450)
+    // Answered by the backend /chat, grounded in this building's NYC records.
+    chrome.runtime.sendMessage(
+      { type: 'CHAT', address: report.address, question: trimmedQuestion },
+      (resp) => {
+        if (chrome.runtime.lastError || !resp?.ok) {
+          const detail = chrome.runtime.lastError?.message || resp?.error || 'Something went wrong.'
+          setMessages((current) => [...current, { role: 'assistant', text: `Sorry — ${detail}` }])
+          setChatStatus('done')
+          return
+        }
+        setMessages((current) => [...current, { role: 'assistant', text: resp.data.answer }])
+        setChatStatus('done')
+      },
+    )
   }
 
   return (
@@ -185,7 +174,7 @@ function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }: ChatP
           <p className="eyebrow">Ask about this building</p>
           <h2 id="chat-title">What else do you want to know?</h2>
         </div>
-        <span className="chat-status">Sample answers</span>
+        <span className="chat-status">Grounded in records</span>
       </div>
 
       {messages.length > 0 && (
