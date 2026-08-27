@@ -13,28 +13,88 @@ const DATASET_LABEL = {
   rodent: 'Rodent',
 }
 
+// hard coded sample data to be returned to the frontend after reading visible text on apartment page
+const SAMPLE_REPORT = {
+  address: '123 Sample Avenue, Brooklyn, NY 11215',
+  bbl: '3012347501',
+  grade: 'B',
+  headline: 'Generally well-maintained building with a few issues worth asking about.',
+  issues: [
+    { tag: '311', severity: 'med', text: 'Several heat and hot-water complaints were reported during winter months.' },
+    { tag: 'hpd', severity: 'low', text: 'A small number of apartment maintenance complaints appear in the record.' },
+    { tag: 'dob', severity: 'low', text: 'No recent major construction violations were found.' },
+  ],
+  counts: { c311: 14, hpd: 3, dob: 1, rodent: 0 },
+}
+
+// chat bot sample responses
+const SAMPLE_ANSWERS = [
+  {
+    matches: ['heat', 'warm', 'hot water'],
+    answer: 'The records suggest this is worth asking about. Several heat and hot-water complaints were reported during winter months, so ask the landlord how quickly those issues were resolved and whether the building has a recent heating inspection.',
+  },
+  {
+    matches: ['noise', 'noisy', 'loud'],
+    answer: 'The available building records do not measure everyday street noise. This listing is on a residential Brooklyn block, so visit at two different times of day and ask a current resident about traffic, nightlife, and construction noise.',
+  },
+  {
+    matches: ['safe', 'safety', 'crime'],
+    answer: 'This report does not include a crime or personal-safety score. It shows a small number of maintenance records, but you should still visit the block and check current neighborhood data before deciding.',
+  },
+]
+
 export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | done | error
   const [report, setReport] = useState(null)
   const [error, setError] = useState(null)
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState([])
+  const [chatStatus, setChatStatus] = useState('idle')
 
   function analyze() {
     setStatus('loading')
     setError(null)
-    chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
-      if (chrome.runtime.lastError) {
-        setStatus('error')
-        setError(chrome.runtime.lastError.message)
-        return
-      }
-      if (!resp?.ok) {
-        setStatus('error')
-        setError(resp?.error || 'Unknown error')
-        return
-      }
-      setReport(resp.data)
+
+    // Restore this request when the backend is available.
+    // chrome.runtime.sendMessage({ type: 'ANALYZE' }, (resp) => {
+    //   if (chrome.runtime.lastError) {
+    //     setStatus('error')
+    //     setError(chrome.runtime.lastError.message)
+    //     return
+    //   }
+    //   if (!resp?.ok) {
+    //     setStatus('error')
+    //     setError(resp?.error || 'Unknown error')
+    //     return
+    //   }
+    //   setReport(resp.data)
+    //   setStatus('done')
+    // })
+
+    window.setTimeout(() => {
+      setReport(SAMPLE_REPORT)
       setStatus('done')
-    })
+    }, 500)
+  }
+
+  function askQuestion(event) {
+    event.preventDefault()
+    const trimmedQuestion = question.trim()
+    if (!trimmedQuestion || chatStatus === 'loading') return
+
+    setMessages((current) => [...current, { role: 'user', text: trimmedQuestion }])
+    setQuestion('')
+    setChatStatus('loading')
+
+    window.setTimeout(() => {
+      const normalizedQuestion = trimmedQuestion.toLowerCase()
+      const matchedAnswer = SAMPLE_ANSWERS.find(({ matches }) =>
+        matches.some((match) => normalizedQuestion.includes(match)),
+      )
+      const answer = matchedAnswer?.answer || 'I do not have enough building-specific data to answer that yet. Try asking about heat, hot water, noise, maintenance, or safety.'
+      setMessages((current) => [...current, { role: 'assistant', text: answer }])
+      setChatStatus('done')
+    }, 450)
   }
 
   return (
@@ -65,8 +125,58 @@ export default function App() {
         </p>
       )}
 
-      {status === 'done' && report && <ReportCard report={report} />}
+      {status === 'done' && report && (
+        <>
+          <ReportCard report={report} />
+          <Chat
+            messages={messages}
+            question={question}
+            chatStatus={chatStatus}
+            onQuestionChange={setQuestion}
+            onAsk={askQuestion}
+          />
+        </>
+      )}
     </div>
+  )
+}
+
+function Chat({ messages, question, chatStatus, onQuestionChange, onAsk }) {
+  return (
+    <section className="chat" aria-labelledby="chat-title">
+      <div className="chat-head">
+        <div>
+          <p className="eyebrow">Ask about this building</p>
+          <h2 id="chat-title">What else do you want to know?</h2>
+        </div>
+        <span className="chat-status">Sample answers</span>
+      </div>
+
+      {messages.length > 0 && (
+        <div className="messages" aria-live="polite">
+          {messages.map((message, index) => (
+            <div key={`${message.role}-${index}`} className={`message message-${message.role}`}>
+              <span className="message-label">{message.role === 'user' ? 'You' : 'Report'}</span>
+              <p>{message.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form className="chat-form" onSubmit={onAsk}>
+        <input
+          aria-label="Ask a question about this building"
+          value={question}
+          onChange={(event) => onQuestionChange(event.target.value)}
+          placeholder="Is the heat reliable?"
+          disabled={chatStatus === 'loading'}
+        />
+        <button type="submit" disabled={!question.trim() || chatStatus === 'loading'}>
+          {chatStatus === 'loading' ? '...' : 'Ask'}
+        </button>
+      </form>
+      <p className="chat-note">Answers are based on the current report.</p>
+    </section>
   )
 }
 
